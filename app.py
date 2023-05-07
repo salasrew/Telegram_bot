@@ -1,15 +1,12 @@
 import logging
-from telegram import Update, ParseMode
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram import Update
+from telegram.ext import Updater, MessageHandler, Filters, CallbackContext
 
 # 設定您的 Telegram Bot 的 token
-TOKEN = "YOUR TOKEN"
+TOKEN = "Your Token"
 
 # 設定轉發訊息的目標群組 ID
-TARGET_GROUP_ID = "TARGET_GROUP_ID"
-
-# 設定來源頻道或群組的 ID，這裡以頻道為例
-# SOURCE_CHANNEL_ID = "TOKEN"
+TARGET_GROUP_ID = "Target ID"
 
 # 設定日誌紀錄的等級
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -24,11 +21,21 @@ def forward_message(update: Update, context: CallbackContext):
 
     # 如果訊息中包含媒體檔案才執行轉發
     if message.media_group_id or message.photo or message.video or message.document:
+
+        # 如果媒體檔案有名稱 回傳名稱
+        file_name = message.document.file_name if message.document else None
+
         # 將訊息轉發到目標群組
+        context.bot.send_message(chat_id=TARGET_GROUP_ID, text="Received message from " + chat_title)
+        if file_name:
+            print(f"Document file name: {file_name}")
+            context.bot.send_message(chat_id=TARGET_GROUP_ID, text="Document file name: "+ file_name)
+
         context.bot.forward_message(chat_id=TARGET_GROUP_ID, from_chat_id=chat_id, message_id=message.message_id)
         # 在控制台上輸出該群組的 ID 或頻道的 ID
         # print(f"Received message from {chat_title}, {chat_id}")
         print(f"Received message from {chat_title}")
+
 
 # 建立一個 Telegram Bot 實例
 bot = Updater(token=TOKEN, use_context=True)
