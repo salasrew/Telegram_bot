@@ -1,54 +1,43 @@
 import logging
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram import Update, ParseMode
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
+# 設定您的 Telegram Bot 的 token
+TOKEN = "YOUR TOKEN"
 
-# 配置日誌
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
+# 設定轉發訊息的目標群組 ID
+TARGET_GROUP_ID = "TARGET_GROUP_ID"
 
-logger = logging.getLogger(__name__)
+# 設定來源頻道或群組的 ID，這裡以頻道為例
+# SOURCE_CHANNEL_ID = "TOKEN"
 
-# 定義處理 /start 命令的函式
-def start(update, context):
-    """Send a message when the command /start is issued."""
-    update.message.reply_text('Hi!')
+# 設定日誌紀錄的等級
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# 定義處理 /echo 命令的函式
-def echo(update, context):
-    """Echo the user message."""
-    update.message.reply_text(update.message.text)
+# 定義一個處理訊息的函數，當 Bot 收到訊息時，會呼叫此函數
+def forward_message(update: Update, context: CallbackContext):
+    # 當前訊息的Json檔
+    message = update.effective_message 
+    # 取得目前訊息所在的群組或頻道 ID
+    chat_title = message['chat']['title']
+    chat_id = message.chat_id
 
-# 定義處理非命令訊息的函式
-def handle_message(update, context):
-    """Echo the user message."""
-    update.message.reply_text(update.message.text)
+    # 如果訊息中包含媒體檔案才執行轉發
+    if message.media_group_id or message.photo or message.video or message.document:
+        # 將訊息轉發到目標群組
+        context.bot.forward_message(chat_id=TARGET_GROUP_ID, from_chat_id=chat_id, message_id=message.message_id)
+        # 在控制台上輸出該群組的 ID 或頻道的 ID
+        # print(f"Received message from {chat_title}, {chat_id}")
+        print(f"Received message from {chat_title}")
 
+# 建立一個 Telegram Bot 實例
+bot = Updater(token=TOKEN, use_context=True)
 
-# 創建一個 Updater 對象，並將其與憑證和代理配置一起使用（如果需要）
-# 這裡使用的是長輪詢方式，如果您想使用 Webhook 方式，可以刪除 webhook_url 參數
-updater = Updater(token='Your Token', use_context=True)
+# 設定一個 MessageHandler 實例，處理所有來自群組或頻道的訊息
+bot.dispatcher.add_handler(MessageHandler(Filters.chat_type.groups | Filters.chat_type.channel, forward_message))
 
-# 獲取 Dispatcher 物件
-dispatcher = updater.dispatcher
+# 啟動 Bot，開始接收訊息
+bot.start_polling()
 
-# 添加處理 /start 命令的處理函式
-start_handler = CommandHandler('start', start)
-dispatcher.add_handler(start_handler)
-
-# 添加處理 /echo 命令的處理函式
-echo_handler = CommandHandler('echo', echo)
-dispatcher.add_handler(echo_handler)
-
-# 添加處理非命令訊息的處理函式
-message_handler = MessageHandler(Filters.text & (~Filters.command), handle_message)
-dispatcher.add_handler(message_handler)
-
-# 開始接收和分派訊息
-updater.start_polling()
-
-# 進入持續運行狀態
-updater.idle()
-
-
-
-
+# 讓 Bot 一直運行，直到程式被手動停止
+bot.idle()
